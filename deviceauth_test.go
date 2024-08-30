@@ -61,9 +61,14 @@ func TestDeviceAuthResponseUnmarshalJson(t *testing.T) {
 			want: DeviceAuthResponse{},
 		},
 		{
-			name: "soon",
-			data: `{"expires_in":100}`,
-			want: DeviceAuthResponse{Expiry: time.Now().UTC().Add(100 * time.Second)},
+			name: "soon - ints",
+			data: `{"expires_in":100,"interval": 5}`,
+			want: DeviceAuthResponse{Interval: 5, Expiry: time.Now().UTC().Add(100 * time.Second)},
+		},
+		{
+			name: "soon - strings",
+			data: `{"expires_in":"100","interval":"5"}`,
+			want: DeviceAuthResponse{Interval: 5, Expiry: time.Now().UTC().Add(100 * time.Second)},
 		},
 	}
 	for _, tc := range tests {
