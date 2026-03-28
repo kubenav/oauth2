@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -59,7 +60,8 @@ func (d DeviceAuthResponse) MarshalJSON() ([]byte, error) {
 func (c *DeviceAuthResponse) UnmarshalJSON(data []byte) error {
 	type Alias DeviceAuthResponse
 	aux := &struct {
-		ExpiresIn int64 `json:"expires_in"`
+		ExpiresIn interface{} `json:"expires_in"`
+		Interval  interface{} `json:"interval"`
 		// workaround misspelling of verification_uri
 		VerificationURL string `json:"verification_url"`
 		*Alias
@@ -69,9 +71,35 @@ func (c *DeviceAuthResponse) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	if aux.ExpiresIn != 0 {
-		c.Expiry = time.Now().UTC().Add(time.Second * time.Duration(aux.ExpiresIn))
+
+	if aux.ExpiresIn != nil {
+		if expiresIn, ok := aux.ExpiresIn.(float64); ok {
+			if expiresIn != 0 {
+				c.Expiry = time.Now().UTC().Add(time.Second * time.Duration(expiresIn))
+			}
+		} else if expiresInStr, ok := aux.ExpiresIn.(string); ok {
+			expiresIn, err := strconv.ParseInt(expiresInStr, 10, 64)
+			if err != nil {
+				return err
+			}
+			if expiresIn != 0 {
+				c.Expiry = time.Now().UTC().Add(time.Second * time.Duration(expiresIn))
+			}
+		}
 	}
+
+	if aux.Interval != nil {
+		if interval, ok := aux.Interval.(float64); ok {
+			c.Interval = int64(interval)
+		} else if intervalStr, ok := aux.Interval.(string); ok {
+			interval, err := strconv.ParseInt(intervalStr, 10, 64)
+			if err != nil {
+				return err
+			}
+			c.Interval = interval
+		}
+	}
+
 	if c.VerificationURI == "" {
 		c.VerificationURI = aux.VerificationURL
 	}
